@@ -1,0 +1,147 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%      screen params 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+screenVar = struct('num', {max(Screen('Screens'))}, 'Hz',{100}, 'rectPix',{[0 0  1280 960]}, 'dist', {57}, 'size', {[41 30]},...
+                    'res', {[1280 1024 ]}, 'calib_filename', {'/Users/purplab/Documents/Sarit/rerdk/0003_yarbus_100628.mat'}); 
+screenVar.centerPix = [screenVar.rectPix(3)/2 screenVar.rectPix(4)/2];
+screenVar.monRefresh = 75;
+white = 255; black = 0;
+    % In a new screen, run:
+     test = Screen('OpenWindow', screenVar.num, [], [0 0 1 1]); 
+     white = WhiteIndex(test);
+     black = BlackIndex(test);
+     Screen('Resolutions', screenVar.num)
+     screenVar.monRefresh = Screen('GetFlipInterval', test); % seconds per frame
+     Screen('CloseAll');
+gray = (white+black)/2;
+screenVar.bkColor = black; screenVar.black = black; screenVar.white = white;
+
+%Compute deg to pixels ratio:
+ratio = degs2Pixels(screenVar.res, screenVar.size, screenVar.dist, [1 1]);
+ratioX = ratio(1); ratioY = ratio(2);
+screenVar.degratioX = ratioX; screenVar.ppd = ratioX; 
+screenVar.degratioY = ratioY; 
+screenVar.num = 2;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%            fixation params 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Draw fixation cross, sizeCross is the cross size,
+% and sizeRect is the size of the rect surronding the cross
+fixationVar = struct( 'color',{[256 0 0]},'dur', {0.5}, 'penWidthPix', {2.5}, 'bkColor', screenVar.bkColor,...
+                      'sizeCrossDeg', {[0.4 0.4]}); 
+
+fixationVar.sizeCrossPix = degs2Pixels(screenVar.res, screenVar.size, screenVar.dist, fixationVar.sizeCrossDeg); % {15}
+fixationVar.rectPix = [0 0 fixationVar.sizeCrossPix(1) fixationVar.sizeCrossPix(2)];
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%      stimuli params 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+stim = struct('sizeDeg', {[2 2]}, 'dur', {2}, 'possibleAngels', {[354 6 186 174 357 3 183 177 358 2 182 178 359 1 181 179 0 180]},...
+    'XdistDeg',{1.9134}, 'YdistDeg', {4.6194}, 'radiusDeg',{5}, 'bkColor', {screenVar.bkColor},'color',{screenVar.white},...
+    'coh', {0.7}, 'speed', {0.5},'lifetime', {1}, 'limitLifetime', {0.02});
+% speed = visual degreee per per second; num =# of dots; coh=propotion moving in designated direction; 
+% diam = diameter of circle of dots in visual degrees; lifetime = logical, are dots limited life time or not
+% limitLifetime = proportion of dots which will be randomly replaced in each frame
+        
+stim.radiusPix = deg2pix1Dim(stim.radiusDeg, ratioX);
+stim.XdistPix = deg2pix1Dim(stim.XdistDeg, ratioX) ; 
+stim.YdistPix = deg2pix1Dim(stim.YdistDeg, ratioY); 
+
+stim.durInFrames = round(stim.dur/screenVar.monRefresh)-1;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%      Dot params 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+dots = struct( 'color',{screenVar.white},'num', {50},  'sizeInPix', {10},...
+                'diam', {20} );
+dots.radius = dots.diam/2; 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%      Oval within dots params 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+oval = struct('degSize',{2}, 'color',{[0 0 0 0]});
+xoval = oval.degSize*ratioX; yoval = oval.degSize*ratioY; %radius
+oval.rectPix = [screenVar.centerPix(1)-xoval, screenVar.centerPix(2)-yoval, screenVar.centerPix(1)+xoval, screenVar.centerPix(2)+yoval];
+oval.present = 1; %whether to present the black oval within the circle of dots
+oval.fixation = 0; %whether to present a fixation in the oval or not
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%            mouse params 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+mouse = struct( 'color',{[256 0 0]},'penWidthPix', {2}, 'bkColor', {[0 0 0]}, 'radiusDeg', {7},...
+                'present',{1}); 
+mouse.radiusPix = ratioX*mouse.radiusDeg;
+if mouse.present
+    fixationVar.present2ndFix = 0;
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%     response params
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+KbName('UnifyKeyNames');
+responseVar = struct( 'allowedRespKeys', {['1', '2']},'allowedRespKeysCodes',{[0 0]}, 'dur',{2},...
+                'keyEscape', 'ESCAPE');    
+for i = 1:length(responseVar.allowedRespKeys)
+    responseVar.allowedRespKeysCodes(i) = KbName(responseVar.allowedRespKeys(i));
+end
+% Note that the correctness of the resp will be computed according to the
+% index in the array of resp so that allowedRespKeys(i) is the correct
+% response of stim.possibleAngels(i)
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%      Trial params
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+trialVars = struct('numTrialsInBlock', {18}); 
+if mod(trialVars.numTrialsInBlock,length(stim.possibleAngels))~=0
+    error('number of trials must be a multiplication of the possible angles');
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%      Block params
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+blockVars = struct('numBlocks', 1);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%      Save Data params
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+saveVars = struct('fileName', {'motionExp'}, 'expTypeDirName', {'eyeData'});
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%      Text params
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+textVars = struct('color', white, 'bkColor', black, 'size', 24);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%     ISI params
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ISIVar = struct('preDur',{0.5}, 'postDur', {0.5}); 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%     eye params
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+eye = struct('record',{0}); % record (1) or not to record (0)
+%If recording set that there will be a second fixation because transfering
+%the files takes time and we want to present a fixation when that happens
+if eye.record
+    fixationVar.present2ndFix = 1;
+    mouse.present = 0;
+end
+
+
+%-------------------------------------------------------------------------%
+%----------------------%%%%%%%%%%%%%%%%%%%--------------------------------%
+%                        TOTAL ALL params                                 %
+%----------------------%%%%%%%%%%%%%%%%%%%--------------------------------%
+%-------------------------------------------------------------------------%
+
+global params;
+params = struct('screenVar', screenVar, 'trialVars', trialVars, 'blockVars', blockVars, 'saveVars', saveVars,...
+                'fixationVar', fixationVar,'textVars',textVars, 'responseVar', responseVar, ...
+                'stim', stim, 'ISIVar', ISIVar, 'dots', dots, 'eye', eye, 'oval', oval, 'mouse', mouse); 
+cl = 1;
+if cl
+    clear white gray black locationL locationR screenVar stim fixationVar precueExg box postCueVar responseVar ;
+    clear trialVars i blockVars fbVars ratio ratioX ratioY sp1 sp2 rc1 ISIVar sqslope hfslp neutralCue;
+    clear saveVars textVars preCue screenInfo mouse dotInfo eye xres yres test xoval yoval oval dots cl;
+end
+
